@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: despacho
+  namespace: tienda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: despacho
+  template:
+    metadata:
+      labels:
+        app: despacho
+    spec:
+      containers:
+        - name: despacho
+          image: 630936672809.dkr.ecr.us-east-1.amazonaws.com/backend:despacho-v1
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: despacho-service
+  namespace: tienda
+spec:
+  selector:
+    app: despacho
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
