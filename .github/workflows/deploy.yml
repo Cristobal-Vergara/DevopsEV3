@@ -1,0 +1,118 @@
+name: Deploy to Amazon EKS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      ####################################################
+      # FRONTEND
+      ####################################################
+
+      - name: Build Frontend
+        working-directory: front_despacho
+        run: |
+          docker build -t frontend:eks-v2 .
+
+      - name: Tag Frontend
+        run: |
+          docker tag frontend:eks-v2 \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:eks-v2
+
+      - name: Push Frontend
+        run: |
+          docker push \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:eks-v2
+
+      ####################################################
+      # BACKEND VENTAS
+      ####################################################
+
+      - name: Build Backend Ventas
+        working-directory: Springboot-API-REST-VENTAS
+        run: |
+          docker build -t backend-ventas .
+
+      - name: Tag Backend Ventas
+        run: |
+          docker tag backend-ventas:latest \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:ventas-v1
+
+      - name: Push Backend Ventas
+        run: |
+          docker push \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:ventas-v1
+
+      ####################################################
+      # BACKEND DESPACHO
+      ####################################################
+
+      - name: Build Backend Despacho
+        working-directory: Springboot-API-REST-DESPACHO
+        run: |
+          docker build -t backend-despacho .
+
+      - name: Tag Backend Despacho
+        run: |
+          docker tag backend-despacho:latest \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:despacho-v2
+
+      - name: Push Backend Despacho
+        run: |
+          docker push \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:despacho-v2
+
+      ####################################################
+      # KUBECTL
+      ####################################################
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Configure kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+          --region ${{ secrets.AWS_REGION }} \
+          --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      ####################################################
+      # DEPLOY
+      ####################################################
+
+      - name: Deploy to EKS
+        run: |
+          kubectl apply -f k8s/
+
+      ####################################################
+      # VERIFY
+      ####################################################
+
+      - name: Verify Deployment
+        run: |
+          kubectl get pods
+          kubectl get svc
