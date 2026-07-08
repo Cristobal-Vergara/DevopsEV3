@@ -13,8 +13,17 @@ jobs:
       contents: read
 
     steps:
+
+      ####################################################
+      # CHECKOUT
+      ####################################################
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      ####################################################
+      # AWS
+      ####################################################
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -24,8 +33,11 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      ####################################################
+      # LOGIN ECR
+      ####################################################
+
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       ####################################################
@@ -35,15 +47,18 @@ jobs:
       - name: Build Frontend
         working-directory: front_despacho
         run: |
-          docker build -t frontend:eks-v2 .
+          docker build -t frontend:latest .
+
       - name: Tag Frontend
         run: |
-          docker tag frontend:eks-v2 \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:eks-v2
+          docker tag frontend:latest \
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:latest
+
       - name: Push Frontend
         run: |
           docker push \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:eks-v2
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:latest
+
       ####################################################
       # BACKEND VENTAS
       ####################################################
@@ -51,15 +66,18 @@ jobs:
       - name: Build Backend Ventas
         working-directory: Springboot-API-REST-VENTAS
         run: |
-          docker build -t backend-ventas .
+          docker build -t backend-ventas:latest .
+
       - name: Tag Backend Ventas
         run: |
           docker tag backend-ventas:latest \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:ventas-v1
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:ventas-latest
+
       - name: Push Backend Ventas
         run: |
           docker push \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:ventas-v1
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:ventas-latest
+
       ####################################################
       # BACKEND DESPACHO
       ####################################################
@@ -67,15 +85,18 @@ jobs:
       - name: Build Backend Despacho
         working-directory: Springboot-API-REST-DESPACHO
         run: |
-          docker build -t backend-despacho .
+          docker build -t backend-despacho:latest .
+
       - name: Tag Backend Despacho
         run: |
           docker tag backend-despacho:latest \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:despacho-v2
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:despacho-latest
+
       - name: Push Backend Despacho
         run: |
           docker push \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:despacho-v2
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:despacho-latest
+
       ####################################################
       # KUBECTL
       ####################################################
@@ -90,18 +111,40 @@ jobs:
           aws eks update-kubeconfig \
           --region ${{ secrets.AWS_REGION }} \
           --name ${{ secrets.EKS_CLUSTER_NAME }}
+
       ####################################################
-      # DEPLOY
+      # APPLY MANIFESTS
       ####################################################
 
-      - name: Deploy to EKS
+      - name: Apply Kubernetes manifests
         run: |
           kubectl apply -f k8s/
+
+      ####################################################
+      # RESTART DEPLOYMENTS
+      ####################################################
+
+      - name: Restart Deployments
+        run: |
+          kubectl rollout restart deployment/frontend -n tienda
+          kubectl rollout restart deployment/ventas -n tienda
+          kubectl rollout restart deployment/despacho -n tienda
+
+      ####################################################
+      # WAIT
+      ####################################################
+
+      - name: Wait for Rollout
+        run: |
+          kubectl rollout status deployment/frontend -n tienda
+          kubectl rollout status deployment/ventas -n tienda
+          kubectl rollout status deployment/despacho -n tienda
+
       ####################################################
       # VERIFY
       ####################################################
 
-      - name: Verify Deployment
+      - name: Verify
         run: |
-          kubectl get pods
-          kubectl get svc
+          kubectl get pods -n tienda
+          kubectl get svc -n tienda
