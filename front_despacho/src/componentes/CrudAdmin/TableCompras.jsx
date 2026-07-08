@@ -7,16 +7,20 @@ export const TableCompras = () => {
   const [ventas, setVentas] = useState([]);
 
   const compras = async () => {
-    await axios.get("http://192.168.30/api/v1/ventas", {
+    // CORRECCIÓN: Apunta a localhost:8081 que es el puerto del backend de Ventas local
+    await axios.get("http://ad161f2e91a204679aa4e000efd0f0e5-2062982930.us-east-1.elb.amazonaws.com/api/v1/ventas", {
       headers:{
         'Content-Type': 'application/json',
         'Accept': 'application/json'
-  }
+      }
     }).then((response) => {
       console.log(response.data);
       setVentas(response.data);
+    }).catch((error) => {
+      console.error("Error al cargar las compras:", error);
     });
   };
+
   // Llamada a la función para obtener los datos cuando el componente se monta
   useEffect(() => {
     compras();
@@ -89,8 +93,7 @@ export const TableCompras = () => {
           <FormDespacho
             venta={ventaSeleccionada}
             onClose={() => {
-              //onclose es un prop que pasa funciones al modal con el form abierto, por ende al cerrarse, se ejecutan esas 2 funciones
-              setOpenModal(false), compras();
+              setOpenModal(false); compras();
             }}
           />
         )}

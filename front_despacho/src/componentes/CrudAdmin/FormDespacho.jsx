@@ -24,22 +24,26 @@ export const FormDespacho = ({ venta, onClose }) => {
     console.log("Datos del formulario:", jsonData);
 
     try {
+      // CORRECCIÓN 1: Apunta a localhost:8081 (Backend de Ventas)
       await axios.put(
-        `http://192.168.30/api/v1/ventas/${venta.idVenta}`,
+        `http://ad161f2e91a204679aa4e000efd0f0e5-2062982930.us-east-1.elb.amazonaws.com/api/v1/ventas/${venta.idVenta}`,
         jsonDataSales,
         {
-          headers:{
+          headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
-      }
+          }
         }
       );
-      await axios.post("http://192.168.320/api/v1/despachos", jsonData, {
-        headers:{
+
+      // CORRECCIÓN 2: Apunta a localhost:8082 (Backend de Despacho)
+      await axios.post("http://a42ace271bc01414a8bb6ca8aabd95fc-999889782.us-east-1.elb.amazonaws.com/api/v1/despachos", jsonData, {
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-    }
+        }
       });
+
       Swal.fire({
         title: "Despacho registrado 🛻!",
         text: "El despacho ha sido generado con éxito en la base de datos",
@@ -48,6 +52,12 @@ export const FormDespacho = ({ venta, onClose }) => {
       });
     } catch (error) {
       console.error("Error en la solicitud:", error);
+      Swal.fire({
+        title: "Error",
+        text: "Hubo un problema al procesar la operación en los servicios",
+        icon: "error",
+        confirmButtonText: "Aceptar",
+      });
     }
     onClose();
   };

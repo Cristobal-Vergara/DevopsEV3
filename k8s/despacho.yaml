@@ -18,6 +18,16 @@ spec:
           image: 630936672809.dkr.ecr.us-east-1.amazonaws.com/backend:despacho-v1
           ports:
             - containerPort: 8080
+
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql-service:3306/demo_db?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+
+            - name: SPRING_DATASOURCE_USERNAME
+              value: root
+
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: root
 ---
 apiVersion: v1
 kind: Service

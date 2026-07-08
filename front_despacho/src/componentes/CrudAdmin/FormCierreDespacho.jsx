@@ -9,20 +9,21 @@ export const FormCierreDespacho = ({ despacho, onClose }) => {
     console.log("onSubmit ejecutado");
     const jsonData = {
       intento: data.intento,
-      despachado: data.despachado,
+      despachado: data.despachado === "true" || data.despachado === true, // Asegura valor booleano desde el select
     };
 
     console.log("Datos del formulario:", jsonData);
 
     try {
+      // CORRECCIÓN: Cambiado a localhost:8082 que corresponde al backend de despacho local
       await axios.put(
-        `http://192.168.320/api/v1/despachos/${despacho.idDespacho}`,
+        `http://a42ace271bc01414a8bb6ca8aabd95fc-999889782.us-east-1.elb.amazonaws.com/api/v1/despachos/${despacho.idDespacho}`,
         jsonData,
         {
-          headers:{
+          headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
-      }
+          }
         }
       );
       Swal.fire({
@@ -33,6 +34,12 @@ export const FormCierreDespacho = ({ despacho, onClose }) => {
       });
     } catch (error) {
       console.error("Error en la solicitud:", error);
+      Swal.fire({
+        title: "Error",
+        text: "No se pudo conectar con el servidor de despachos",
+        icon: "error",
+        confirmButtonText: "Aceptar",
+      });
     }
     onClose();
   };
